@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8100:8100"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data        # 卷持久化：删容器数据不丢
+    restart: unless-stopped
