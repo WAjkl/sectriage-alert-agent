@@ -1,0 +1,294 @@
+{
+ "results": [
+  {
+   "verdict": "华东",
+   "confidence": 0.95,
+   "reason": "华东 聚合值最高（496000）",
+   "ref": "",
+   "steps": 3,
+   "stop_reason": "finish",
+   "tools_used": [
+    "list_columns",
+    "aggregate",
+    "finish"
+   ],
+   "trace": [
+    {
+     "step": 1,
+     "tool": "list_columns",
+     "args": {},
+     "result": {
+      "ok": true,
+      "result": {
+       "columns": [
+        "month",
+        "region",
+        "amount",
+        "orders"
+       ],
+       "rows": 9
+      }
+     }
+    },
+    {
+     "step": 2,
+     "tool": "aggregate",
+     "args": {
+      "column": "amount",
+      "fn": "sum",
+      "group_by": "region"
+     },
+     "result": {
+      "ok": true,
+      "result": {
+       "group_by": "region",
+       "column": "amount",
+       "fn": "sum",
+       "result": {
+        "华南": 378000.0,
+        "华东": 496000.0,
+        "华北": 258000.0
+       }
+      }
+     }
+    },
+    {
+     "step": 3,
+     "tool": "finish",
+     "args": {
+      "verdict": "华东",
+      "confidence": 0.95,
+      "reason": "华东 聚合值最高（496000）"
+     },
+     "result": {
+      "verdict": "华东",
+      "confidence": 0.95,
+      "reason": "华东 聚合值最高（496000）"
+     }
+    }
+   ]
+  },
+  {
+   "verdict": "华东",
+   "confidence": 0.95,
+   "reason": "华东 聚合值最高（1770）",
+   "ref": "",
+   "steps": 3,
+   "stop_reason": "finish",
+   "tools_used": [
+    "list_columns",
+    "aggregate",
+    "finish"
+   ],
+   "trace": [
+    {
+     "step": 1,
+     "tool": "list_columns",
+     "args": {},
+     "result": {
+      "ok": true,
+      "result": {
+       "columns": [
+        "month",
+        "region",
+        "amount",
+        "orders"
+       ],
+       "rows": 9
+      }
+     }
+    },
+    {
+     "step": 2,
+     "tool": "aggregate",
+     "args": {
+      "column": "orders",
+      "fn": "sum",
+      "group_by": "region"
+     },
+     "result": {
+      "ok": true,
+      "result": {
+       "group_by": "region",
+       "column": "orders",
+       "fn": "sum",
+       "result": {
+        "华南": 1235.0,
+        "华东": 1770.0,
+        "华北": 800.0
+       }
+      }
+     }
+    },
+    {
+     "step": 3,
+     "tool": "finish",
+     "args": {
+      "verdict": "华东",
+      "confidence": 0.95,
+      "reason": "华东 聚合值最高（1770）"
+     },
+     "result": {
+      "verdict": "华东",
+      "confidence": 0.95,
+      "reason": "华东 聚合值最高（1770）"
+     }
+    }
+   ]
+  },
+  {
+   "verdict": "1495",
+   "confidence": 0.9,
+   "reason": "按条件筛出 3 行，订单数合计 1495",
+   "ref": "",
+   "steps": 3,
+   "stop_reason": "finish",
+   "tools_used": [
+    "list_columns",
+    "filter_rows",
+    "finish"
+   ],
+   "trace": [
+    {
+     "step": 1,
+     "tool": "list_columns",
+     "args": {},
+     "result": {
+      "ok": true,
+      "result": {
+       "columns": [
+        "month",
+        "region",
+        "amount",
+        "orders"
+       ],
+       "rows": 9
+      }
+     }
+    },
+    {
+     "step": 2,
+     "tool": "filter_rows",
+     "args": {
+      "month": "2026-03"
+     },
+     "result": {
+      "ok": true,
+      "result": {
+       "matched": 3,
+       "rows": [
+        {
+         "month": "2026-03",
+         "region": "华南",
+         "amount": "154000",
+         "orders": "505"
+        },
+        {
+         "month": "2026-03",
+         "region": "华东",
+         "amount": "188000",
+         "orders": "690"
+        },
+        {
+         "month": "2026-03",
+         "region": "华北",
+         "amount": "92000",
+         "orders": "300"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "step": 3,
+     "tool": "finish",
+     "args": {
+      "verdict": "1495",
+      "confidence": 0.9,
+      "reason": "按条件筛出 3 行，订单数合计 1495"
+     },
+     "result": {
+      "verdict": "1495",
+      "confidence": 0.9,
+      "reason": "按条件筛出 3 行，订单数合计 1495"
+     }
+    }
+   ]
+  },
+  {
+   "verdict": "125777.78",
+   "confidence": 0.9,
+   "reason": "amount 平均值 125777.78",
+   "ref": "",
+   "steps": 3,
+   "stop_reason": "finish",
+   "tools_used": [
+    "list_columns",
+    "aggregate",
+    "finish"
+   ],
+   "trace": [
+    {
+     "step": 1,
+     "tool": "list_columns",
+     "args": {},
+     "result": {
+      "ok": true,
+      "result": {
+       "columns": [
+        "month",
+        "region",
+        "amount",
+        "orders"
+       ],
+       "rows": 9
+      }
+     }
+    },
+    {
+     "step": 2,
+     "tool": "aggregate",
+     "args": {
+      "column": "amount",
+      "fn": "avg"
+     },
+     "result": {
+      "ok": true,
+      "result": {
+       "group_by": "all",
+       "column": "amount",
+       "fn": "avg",
+       "result": {
+        "all": 125777.78
+       }
+      }
+     }
+    },
+    {
+     "step": 3,
+     "tool": "finish",
+     "args": {
+      "verdict": "125777.78",
+      "confidence": 0.9,
+      "reason": "amount 平均值 125777.78"
+     },
+     "result": {
+      "verdict": "125777.78",
+      "confidence": 0.9,
+      "reason": "amount 平均值 125777.78"
+     }
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "tasks": 4,
+  "avg_steps": 3.0,
+  "max_steps_used": 3,
+  "stop_reasons": {
+   "finish": 4
+  },
+  "tool_coverage": null,
+  "avg_confidence": 0.925
+ }
+}
