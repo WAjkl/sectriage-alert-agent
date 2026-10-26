@@ -14,7 +14,7 @@ import urllib.request
 from datetime import datetime
 from typing import List, Dict
 
-from . import config, store, retrieve
+from . import config, store, retrieve, resilience
 
 
 # ---------------- 聚合 ----------------
@@ -148,12 +148,19 @@ def triage(c: dict, ctx: dict) -> dict:
     sops = retrieve.retrieve_sop(query, 2)
     if config.LLM_BASE and config.LLM_KEY:
         try:
-            d = json.loads(_call_llm(build_evidence(c, ctx, sops)))
+            # 熔断包住真实调用：模型挂掉时不再逐个事件等满超时，
+            # 连续失败到阈值后直接拒绝，毫秒级回落到规则版。
+            raw = resilience.LLM_BREAKER.call(_call_llm, build_evidence(c, ctx, sops))
+            d = json.loads(raw)
             return {"verdict": d.get("verdict", "need_human"),
                     "confidence": float(d.get("confidence", 0.5)),
                     "reason": d.get("reason", "")[:80],
                     "sop_id": d.get("sop_id", ""), "mode": "llm",
                     "sop_candidates": [s["id"] for s in sops]}
+        except resilience.CircuitOpenError as e:
+            d = _rule_based(c, ctx)
+            d.update(mode="fallback_breaker", error=str(e)[:80])
+            return d
         except Exception as e:
             d = _rule_based(c, ctx)
             d.update(mode="fallback_rule", error=str(e)[:80])

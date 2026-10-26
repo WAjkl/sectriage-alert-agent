@@ -7,15 +7,24 @@
 import os
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import time
 import uuid
 
-from . import config, store, pipeline, retrieve
+from . import config, store, pipeline, retrieve, ingest, resilience
 
 app = FastAPI(
     title="SecTriage",
     version="1.0.0",
     description="安全告警降噪与研判：把几千条告警压成几十个事件，并给出判定、置信度与依据",
+)
+
+# 允许学习站的"项目体验页"跨端口查状态（生产要收紧到具体域名）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
 )
 
 _start_ts = time.time()
@@ -54,8 +63,12 @@ def stats():
 
 
 @app.get("/clusters")
-def clusters(limit: int = 20, with_truth: bool = False):
-    cs = pipeline.aggregate(store.load_alerts())
+def clusters(limit: int = 20, with_truth: bool = False, with_device: bool = False):
+    alerts = store.load_alerts()
+    if with_device:
+        # 设备事件在内存里合并，不写进 alerts.jsonl —— 保证原有评测数字可复现
+        alerts = alerts + ingest.load_device_alerts()
+    cs = pipeline.aggregate(alerts)
     items = []
     for c in cs[:limit]:
         d = _public(c)
@@ -124,6 +137,48 @@ def decide_one(cluster_id: str, request: Request,
 def audit(limit: int = 20):
     rows = store.read_audit(limit)
     return {"total": len(rows), "rows": rows}
+
+
+# ---------------- 韧性观测 ----------------
+@app.get("/resilience")
+def resilience_state():
+    """熔断器状态。运维/面试都能用：模型挂了时这里能看到 open 和被拒次数。"""
+    return {"items": [resilience.LLM_BREAKER.snapshot()]}
+
+
+@app.post("/resilience/reset")
+def resilience_reset():
+    """手工复位：确认下游已恢复后立刻放行，不用等冷却（避免干等 30 秒）。"""
+    resilience.LLM_BREAKER.reset()
+    return {"ok": True, "state": resilience.LLM_BREAKER.state}
+
+
+# ---------------- 边缘设备接入（ESP32） ----------------
+# 设备侧不判断"这是不是攻击"，只判断"这一批采样里本地窗口是否异常"，
+# 异常才上报 —— 把降噪的一部分搬到边缘，见 docs/ESP32_边缘告警源_方案.md
+
+@app.post("/ingest")
+def ingest_events(payload: dict, x_ingest_token: str = Header(default="")):
+    """设备上报（幂等：同一 boot_id+seq 重复发只算一次）。"""
+    if config.INGEST_TOKEN and x_ingest_token != config.INGEST_TOKEN:
+        raise HTTPException(401, "bad ingest token")
+    res = ingest.ingest(payload)
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@app.get("/device/events")
+def device_events(limit: int = 20):
+    ingest.sweep_offline()          # 顺手做一次掉线检测（设备自己报不了"我掉线了"）
+    rows = ingest.load_events(limit)
+    return {"total": len(ingest.load_events()), "rows": rows}
+
+
+@app.get("/device/status")
+def device_status():
+    ingest.sweep_offline()
+    return {"items": ingest.device_status(), "offline_sec": config.DEVICE_OFFLINE_SEC}
 
 
 @app.exception_handler(Exception)

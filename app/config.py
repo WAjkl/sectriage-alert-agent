@@ -12,6 +12,23 @@ ASSETS_PATH = os.path.join(DATA_DIR, "assets.json")
 SOP_PATH = os.path.join(DATA_DIR, "sop.jsonl")
 AUDIT_PATH = os.path.join(DATA_DIR, "audit.jsonl")
 
+# 边缘设备（ESP32）事件：单独一个文件，不和 alerts.jsonl 混。
+# 原因：alerts.jsonl 是评测基准，混进设备事件会让"3000 条 → 40 个事件"这类
+# 数字不可复现，别人拉下来一跑就对不上。
+DEVICE_PATH = os.path.join(DATA_DIR, "device_events.jsonl")
+
+# 设备上报的共享令牌（留空 = 不校验，仅限本机演示；对局域网开放时必须设置）
+INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")
+
+# 熔断：连续失败几次开门 / 开门后冷却多少秒
+BREAKER_THRESHOLD = int(os.getenv("BREAKER_THRESHOLD", "3"))
+BREAKER_COOLDOWN = float(os.getenv("BREAKER_COOLDOWN", "30"))
+
+# 多久没上报算掉线（秒）。
+# **必须 ≥ 3× 设备心跳间隔**，否则设备永远"假离线"（真机上踩过：心跳 300s、阈值 120s，
+# 后端每分钟报一次心跳丢失，板子其实一直活着）。当前固件心跳 60s → 阈值 180s。
+DEVICE_OFFLINE_SEC = int(os.getenv("DEVICE_OFFLINE_SEC", "180"))
+
 # 聚合
 WINDOW_MIN = int(os.getenv("WINDOW_MIN", "10"))
 
