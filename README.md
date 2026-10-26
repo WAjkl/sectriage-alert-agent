@@ -2,7 +2,36 @@
 
 把每天几千条安全告警，自动压成几十个"事件"，并对每个事件给出**判定 + 置信度 + 依据 + 处置建议**。
 
-2026.10 开始做。设计思想见 [docs/实现思想详解.md](docs/实现思想详解.md)。
+2026.10 开始做。设计思想见 [docs/实现思想详解.md](docs/实现思想详解.md)，
+与标准企业级 Agent 骨架的对照见 [docs/架构与标准企业骨架对照.md](docs/架构与标准企业骨架对照.md)。
+做这个项目踩过的 10 个坑（含误判与代价）见 [docs/走过的弯路.md](docs/走过的弯路.md)
+——**如果只想判断"这是不是真做过"，看这一份最快**。
+
+---
+
+## 可验证证据（先看这一节，30 秒判断真假）
+
+```bash
+pip install -r requirements.txt
+pytest -q                    # → 27 passed（0.1s 级）
+python scripts/eval_gate.py  # → 6 项门槛，全部 OK
+bash scripts/ci.sh           # → 六关流水线（依赖/静态检查/单测/评测门槛/镜像/健康检查）
+python main.py --port 8200   # → 打开 http://127.0.0.1:8200/ 点几下
+```
+
+| 指标 | 实测值 | 怎么复现 |
+|---|---|---|
+| 告警 → 事件 | **3000 → 40**，降噪率 **98.67%** | `curl /stats` |
+| 平均每簇 | **75.0 条** | `curl /stats` |
+| 路由分布 | `need_human 35 / review 4 / escalate 1` | `curl /run` |
+| 单测 | **27 个**，0.1s | `pytest -q` |
+| 评测门槛 | 6 项（降噪率/簇数/每簇数/路由合法性/单簇上限/有数据） | `python scripts/eval_gate.py` |
+| 模型挂掉时的全量研判耗时 | **80.2s → 6.1s（13.1×）** | `python scripts/breaker_experiment.py` |
+| 熔断真实调用次数 | **40 → 3**（其余 37 次直接拒绝，不再等超时） | 同上 |
+| 检索换向量模型的难例提升 | **+19pt**（对照实验，见 `向量替换对照实验`） | 见 docs |
+| 代码量 | app 896 行 + 脚本 457 行 + 测试 216 行 = **1644 行** | `wc -l` |
+
+> 所有数字都能用上面的命令重跑出来。**跑不出来的数字我不会写在这里。**
 
 ---
 
@@ -76,6 +105,13 @@ TP=7  FP=1  FN=0  TN=32
 | GET | `/run` | 全量跑一遍，返回路由分布 |
 | POST | `/decide/{cluster_id}` | 对单个事件出决策并写审计（不执行处置） |
 | GET | `/audit?limit=` | 读审计日志 |
+| POST | `/ingest` | 边缘设备上报（幂等，按 `boot_id+seq` 去重） |
+| GET | `/device/events?limit=` | 设备事件流水（含心跳） |
+| GET | `/device/status` | 每台设备活跃度；静默超 120s 判离线并产一条告警 |
+
+> 设备事件单独存 `data/device_events.jsonl`，**不进 `alerts.jsonl`**——否则评测数字不可复现。
+> 想一起看簇：`/clusters?with_device=true`（内存合并，不写盘）。
+> 方案与实验清单见 `docs/ESP32_边缘告警源_方案.md`。
 
 ## 目录
 
