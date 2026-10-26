@@ -28,7 +28,7 @@ python main.py --port 8200   # → 打开 http://127.0.0.1:8200/ 点几下
 | 评测门槛 | 6 项（降噪率/簇数/每簇数/路由合法性/单簇上限/有数据） | `python scripts/eval_gate.py` |
 | 模型挂掉时的全量研判耗时 | **80.2s → 6.1s（13.1×）** | `python scripts/breaker_experiment.py` |
 | 熔断真实调用次数 | **40 → 3**（其余 37 次直接拒绝，不再等超时） | 同上 |
-| 检索换向量模型的难例提升 | **+19pt**（对照实验，见 `向量替换对照实验`） | 见 docs |
+| 降噪归因（消融） | 聚合层吃掉全部合并量：3000→40（98.67%）；研判层不合并只定性，人工 25h→1.7h | `python scripts/ablation.py` |
 | 代码量 | app 896 行 + 脚本 457 行 + 测试 216 行 = **1644 行** | `wc -l` |
 
 > 所有数字都能用上面的命令重跑出来。**跑不出来的数字我不会写在这里。**
@@ -125,14 +125,14 @@ app/
 └── web/index.html 前端单页
 main.py           启动入口（首次自动造数据）
 scripts/gen_alerts.py  告警生成器（8 类 + 反泄漏自检）
-tests/            14 个单测（跑 0.07 秒）
-docs/             实现思想详解
+tests/            27 个单测（跑 0.1 秒）：pipeline 14 + 边缘接入 7 + 熔断 6
+docs/             实现思想详解 / 架构对照 / 走过的弯路 / ESP32 方案
 ```
 
 ## 开发
 
 ```bash
-pytest -q                       # 14 passed
+pytest -q                       # 27 passed
 python scripts/gen_alerts.py    # 重新生成数据
 pytest -q -k aggregate          # 只跑聚合相关
 ```
