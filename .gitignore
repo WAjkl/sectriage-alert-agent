@@ -6,3 +6,10 @@ __pycache__/
 .pytest_cache/
 .env
 .venv/
+
+# 边缘设备事件（本机演示数据，不进仓库）
+data/device_events.jsonl
+
+# 固件凭据（WiFi 密码等）
+firmware/**/secrets.h
+_run.log

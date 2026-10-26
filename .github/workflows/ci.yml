@@ -1,0 +1,61 @@
+# GitHub Actions 模板 —— 和 scripts/ci.sh 是同一件事，只是换成"服务器帮你跑"
+#
+# 公司里常见三种，写法不同、五关一样：
+#   GitHub Actions → 本文件
+#   GitLab CI      → .gitlab-ci.yml（stages: test / build / deploy）
+#   Jenkins        → Jenkinsfile（declarative pipeline，stage 同构）
+#
+# 面试被问"你们流水线几关"，答：装依赖 → 静态检查 → 单测 → 构建镜像 → 部署验证，
+# 顺序不能反：越早的关卡越便宜，把便宜的放前面，失败得快。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip                     # 缓存依赖，省 20–40 秒
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 语法检查
+        run: python -m compileall -q app main.py scripts
+
+      - name: 单元测试
+        run: pytest -q
+
+  build:
+    needs: test                          # 测试不过就不构建：省时间也省镜像仓库空间
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 构建镜像
+        run: docker build -t sectriage:${{ github.sha }} .
+
+      # 镜像 tag 用 commit sha，不用 latest。
+      # 理由：latest 不可追溯 —— 出了问题你不知道线上跑的是哪次提交。
+      - name: 起容器 + 健康检查
+        run: |
+          docker run -d --name ci -p 18100:8100 sectriage:${{ github.sha }}
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:18100/health && exit 0
+            sleep 1
+          done
+          docker logs ci
+          exit 1
+
+      - name: 清理
+        if: always()
+        run: docker rm -f ci || true
